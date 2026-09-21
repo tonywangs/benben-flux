@@ -2,6 +2,10 @@
 
 Generate photos and artwork of **Benben the Maltese** with a FLUX.1-dev DreamBooth LoRA, trained and served on Modal. Photos stay out of Git; training runs, checkpoints, and weights live in a Modal Volume. The Gradio app requires a password and GPU containers scale to zero.
 
+## Live app
+
+Open [Benben’s World](https://jordan-tony-collab--benben-flux-web.modal.run) and sign in using the `benben-web-auth` credentials. The first trained model, `benben-v1`, is selected by default. It was trained on 20 selected photos for 500 steps in the `jordan-tony-collab` workspace. Your original photos and generated images are not committed to GitHub.
+
 ## Setup
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:

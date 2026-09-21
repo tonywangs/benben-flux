@@ -206,7 +206,7 @@ def web():
 
     with gr.Blocks(title="Benben's World", theme=gr.themes.Soft()) as ui:
         gr.Markdown("# Benben’s World\nA little Maltese. Endless adventures.")
-        run_id = gr.Textbox(label="Training run", placeholder="Your completed run ID")
+        run_id = gr.Textbox(label="Training run", value="benben-v1")
         scene = gr.Textbox(
             label="Imagine Benben…", value="wearing a tiny astronaut suit on the moon"
         )
