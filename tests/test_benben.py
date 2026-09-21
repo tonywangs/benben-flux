@@ -68,3 +68,50 @@ def test_small_image_rejected(tmp_path):
 def test_missing_photos_fail_before_remote_work(tmp_path):
     with pytest.raises(ValueError, match="Found 0 photos"):
         prepare_photos(str(tmp_path))
+
+
+def test_captioned_training_uses_dataset_and_explicit_alpha():
+    cmd = TrainConfig(
+        captioned=True,
+        center_crop=True,
+        lora_alpha=16,
+        checkpointing_steps=200,
+        max_sequence_length=256,
+    ).command("/base", "/photos", "/run")
+    assert "--dataset_name=/photos" in cmd
+    assert not any(x.startswith("--instance_data_dir=") for x in cmd)
+    assert "--caption_column=text" in cmd
+    assert "--lora_alpha=16" in cmd
+    assert "--center_crop" in cmd
+    assert "--checkpointing_steps=200" in cmd
+
+
+def test_caption_alignment_follows_uploaded_photo_order(tmp_path):
+    import json
+    from benben import prepare_captioned_photos
+
+    rows = []
+    for name, color in [("b.png", "blue"), ("a.png", "red"), ("c.png", "green")]:
+        Image.new("RGB", (768, 768), color).save(tmp_path / name)
+        rows.append({"file_name": name, "text": f"caption for {name}"})
+    (tmp_path / "metadata.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+    photos, captions = prepare_captioned_photos(str(tmp_path))
+    assert len(photos) == 3
+    assert captions == ["caption for a.png", "caption for b.png", "caption for c.png"]
+    rows.pop()
+    (tmp_path / "metadata.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+    with pytest.raises(ValueError, match="match every"):
+        prepare_captioned_photos(str(tmp_path))
+
+
+def test_reference_prompt_preserves_identity_and_rejects_empty_edits():
+    from benben import build_edit_prompt
+
+    prompt = build_edit_prompt("  Put him in a garden.  ")
+    assert prompt.startswith("Put him in a garden.")
+    assert "facial features" in prompt
+    assert "pony" in prompt
+    with pytest.raises(ValueError):
+        build_edit_prompt("   ")
+    with pytest.raises(ValueError):
+        build_edit_prompt("x" * 1801)

@@ -1,0 +1,28 @@
+[
+  {
+    "name": "base-plain",
+    "adapter": null,
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting in a sunny garden, natural realistic photograph"
+  },
+  {
+    "name": "base-ponytail",
+    "adapter": null,
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting in a sunny garden"
+  },
+  {
+    "name": "v1-plain",
+    "adapter": "benben-v1/lora",
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting in a sunny garden, natural realistic photograph"
+  },
+  {
+    "name": "v1-ponytail",
+    "adapter": "benben-v1/lora",
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting in a sunny garden"
+  },
+  {
+    "name": "v1-ponytail-scale2",
+    "adapter": "benben-v1/lora",
+    "scale": 2,
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting in a sunny garden"
+  }
+]

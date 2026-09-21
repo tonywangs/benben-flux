@@ -1,0 +1,38 @@
+[
+  {
+    "name": "v2-200-garden",
+    "adapter": "benben-v2/lora/checkpoint-200",
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting in a sunny garden, natural realistic photograph",
+    "seed": 117
+  },
+  {
+    "name": "v2-200-portrait",
+    "adapter": "benben-v2/lora/checkpoint-200",
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting on a light grey sofa, front-facing portrait, soft daylight",
+    "seed": 42
+  },
+  {
+    "name": "v2-200-astronaut",
+    "adapter": "benben-v2/lora/checkpoint-200",
+    "prompt": "a photo of benbenmaltese the Maltese dog wearing a small astronaut suit with a transparent helmet on the moon, cinematic photography",
+    "seed": 7
+  },
+  {
+    "name": "v2-400-garden",
+    "adapter": "benben-v2/lora/checkpoint-400",
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting in a sunny garden, natural realistic photograph",
+    "seed": 117
+  },
+  {
+    "name": "v2-400-portrait",
+    "adapter": "benben-v2/lora/checkpoint-400",
+    "prompt": "a photo of benbenmaltese the Maltese dog sitting on a light grey sofa, front-facing portrait, soft daylight",
+    "seed": 42
+  },
+  {
+    "name": "v2-400-astronaut",
+    "adapter": "benben-v2/lora/checkpoint-400",
+    "prompt": "a photo of benbenmaltese the Maltese dog wearing a small astronaut suit with a transparent helmet on the moon, cinematic photography",
+    "seed": 7
+  }
+]

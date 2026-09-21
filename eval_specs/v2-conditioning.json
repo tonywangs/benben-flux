@@ -1,0 +1,20 @@
+[
+  {
+    "name": "v2-400-described",
+    "adapter": "benben-v2/lora/checkpoint-400",
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting in a sunny garden",
+    "seed": 117
+  },
+  {
+    "name": "v2-400-described-portrait",
+    "adapter": "benben-v2/lora/checkpoint-400",
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting on a light grey sofa, front-facing portrait, soft daylight",
+    "seed": 42
+  },
+  {
+    "name": "v2-200-described",
+    "adapter": "benben-v2/lora/checkpoint-200",
+    "prompt": "a photo of benbenmaltese the Maltese dog, with long white silky fur, large round dark eyes, a compact black nose and a high tied-up ponytail on the top of his head, sitting in a sunny garden",
+    "seed": 117
+  }
+]

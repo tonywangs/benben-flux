@@ -6,7 +6,15 @@ from pathlib import Path
 
 import modal
 
-from benben import DIFFUSERS_COMMIT, MODEL_ID, SUBJECT, TrainConfig, prepare_photos, validate_run_id
+from benben import (
+    DIFFUSERS_COMMIT,
+    MODEL_ID,
+    SUBJECT,
+    TrainConfig,
+    prepare_photos,
+    prepare_captioned_photos,
+    validate_run_id,
+)
 
 app = modal.App("benben-flux")
 volume = modal.Volume.from_name("benben-flux", create_if_missing=True)
@@ -32,6 +40,7 @@ image = (
         "ftfy==6.3.1",
         "tensorboard==2.20.0",
         "pillow==11.3.0",
+        "datasets==4.1.1",
     )
     .run_commands(
         "git init /opt/diffusers",
@@ -55,6 +64,8 @@ web_image = (
 def download_model():
     from huggingface_hub import snapshot_download
 
+    if (BASE / "READY").is_file():
+        return
     snapshot_download(
         MODEL_ID,
         local_dir=BASE,
@@ -75,8 +86,14 @@ def download_model():
 
 
 @app.function(image=image, volumes={ROOT: volume}, timeout=600, max_containers=1)
-def upload_dataset(run_id: str, photos: list[bytes], config: dict):
+def upload_dataset(
+    run_id: str, photos: list[bytes], config: dict, captions: list[str] | None = None
+):
     validate_run_id(run_id)
+    if bool(config.get("captioned")) != (captions is not None):
+        raise ValueError("Captioned config and uploaded captions must agree.")
+    if captions is not None and len(captions) != len(photos):
+        raise ValueError("Caption and photo counts differ.")
     target = RUNS / run_id
     if target.exists():
         raise ValueError(f"Run {run_id} already exists. Use --resume or a different --run-id.")
@@ -84,6 +101,23 @@ def upload_dataset(run_id: str, photos: list[bytes], config: dict):
     data.mkdir(parents=True)
     for index, photo in enumerate(photos):
         (data / f"{index:03d}.jpg").write_bytes(photo)
+    if captions is not None:
+        (data / "metadata.jsonl").write_text(
+            "\n".join(
+                json.dumps({"file_name": f"{i:03d}.jpg", "text": caption})
+                for i, caption in enumerate(captions)
+            )
+        )
+    if captions is not None:
+        from datasets import load_dataset
+
+        dataset = load_dataset(str(data), split="train")
+        if len(dataset) != len(photos) or "text" not in dataset.column_names:
+            raise ValueError("Uploaded captioned dataset failed preflight.")
+        for row in dataset:
+            if row["image"].size != (config["resolution"], config["resolution"]):
+                raise ValueError("Captioned training photos must be square at training resolution.")
+        print(f"Dataset preflight passed: {len(dataset)} captioned square photos.")
     (target / "config.json").write_text(json.dumps(config, indent=2))
     volume.commit()
 
@@ -94,7 +128,7 @@ def upload_dataset(run_id: str, photos: list[bytes], config: dict):
     cpu=8,
     memory=131072,
     volumes={ROOT: volume},
-    timeout=7200,
+    timeout=1200,
     max_containers=1,
 )
 def train_model(run_id: str, resume: bool = False):
@@ -198,34 +232,54 @@ def web():
     from fastapi import FastAPI
     from PIL import Image
 
-    def generate(run_id, scene, seed, steps):
-        validate_run_id(run_id)
-        prompt = f"{SUBJECT}, {scene.strip()}"
-        result = Benben(run_id=run_id).generate.remote(prompt, int(seed), int(steps))
-        return Image.open(io.BytesIO(result)), f"Seed: {int(seed)} · Prompt: {prompt}"
+    def preview(reference):
+        data = modal.Function.from_name("benben-kontext", "reference_image").remote(reference)
+        return Image.open(io.BytesIO(data))
+
+    def edit(reference, instruction, seed):
+        editor = modal.Cls.from_name("benben-kontext", "Editor")()
+        picture, metadata = editor.edit.remote(instruction, reference, int(seed))
+        return Image.open(io.BytesIO(picture)), f"Reference: {reference} · Seed: {metadata['seed']}"
 
     with gr.Blocks(title="Benben's World", theme=gr.themes.Soft()) as ui:
-        gr.Markdown("# Benben’s World\nA little Maltese. Endless adventures.")
-        run_id = gr.Textbox(label="Training run", value="benben-v1")
-        scene = gr.Textbox(
-            label="Imagine Benben…", value="wearing a tiny astronaut suit on the moon"
+        gr.Markdown("# Benben’s World\nStart with Benben’s real photo. Imagine somewhere new.")
+        reference = gr.Dropdown(
+            choices=[("Portrait", "portrait"), ("Standing", "standing"), ("Smiling", "smiling")],
+            value="portrait",
+            label="Choose Benben’s photo",
+        )
+        with gr.Row():
+            source = gr.Image(label="Reference photo", interactive=False, height=400)
+            result = gr.Image(label="Your new image", type="pil", format="png", height=400)
+        instruction = gr.Textbox(
+            label="What would you like to change?",
+            lines=3,
+            value="Change the background to a lush sunlit garden with pink flowers. Place the dog on the grass.",
         )
         gr.Examples(
             [
-                "sitting in a field of wildflowers, warm afternoon photography",
-                "as a watercolor portrait, soft pastel colors",
-                "sailing a tiny boat on a peaceful lake",
+                "Change the background to a lush sunlit garden with pink flowers. Place the dog on the grass.",
+                "Transform this photo into a delicate watercolor illustration on white paper.",
             ],
-            inputs=scene,
+            inputs=instruction,
         )
-        with gr.Row():
-            seed = gr.Number(label="Seed", value=117, precision=0, minimum=0, maximum=2**32 - 1)
-            steps = gr.Slider(1, 50, value=28, step=1, label="Detail steps")
+        seed = gr.Number(label="Seed", value=117, precision=0, minimum=0, maximum=2**32 - 1)
         button = gr.Button("Imagine Benben", variant="primary")
-        result = gr.Image(label="Benben", type="pil")
         details = gr.Textbox(label="Generation details")
-        button.click(generate, [run_id, scene, seed, steps], [result, details], concurrency_limit=1)
-        gr.Markdown("The first image may take a few minutes while the model wakes up.")
+        button.click(
+            edit,
+            [reference, instruction, seed],
+            [result, details],
+            concurrency_limit=1,
+            api_name="edit",
+        )
+        reference.change(preview, reference, source, api_name="preview")
+        ui.load(preview, reference, source, api_name=False)
+        gr.Markdown(
+            "Uses your selected photo to preserve Benben’s appearance. "
+            "Costumes and large pose changes can still change his likeness. "
+            "The first image may take a few minutes while the model wakes up."
+        )
     ui.queue(max_size=10, default_concurrency_limit=1)
     return gr.mount_gradio_app(
         FastAPI(), ui, path="/", auth=(os.environ["USERNAME"], os.environ["PASSWORD"])
@@ -241,16 +295,34 @@ def train(
     learning_rate: float = 1e-4,
     resolution: int = 512,
     resume: bool = False,
+    captioned: bool = False,
+    lora_alpha: int = 16,
+    center_crop: bool = False,
+    checkpointing_steps: int = 100,
+    max_sequence_length: int = 512,
 ):
     """Validate/upload photos, cache the model, then train one saved run."""
     if resume and not run_id:
         raise ValueError("--resume requires --run-id.")
     run_id = validate_run_id(run_id or datetime.now(timezone.utc).strftime("benben-%Y%m%d-%H%M%S"))
-    config = TrainConfig(steps=steps, rank=rank, learning_rate=learning_rate, resolution=resolution)
+    config = TrainConfig(
+        steps=steps,
+        rank=rank,
+        learning_rate=learning_rate,
+        resolution=resolution,
+        captioned=captioned,
+        lora_alpha=lora_alpha,
+        center_crop=center_crop,
+        checkpointing_steps=checkpointing_steps,
+        max_sequence_length=max_sequence_length,
+    )
     if not resume:
-        pictures = prepare_photos(photos)  # Fail locally before downloading or renting a GPU.
+        if captioned:
+            pictures, captions = prepare_captioned_photos(photos)
+        else:
+            pictures, captions = prepare_photos(photos), None
         print(f"Uploading {len(pictures)} photos for {run_id}.")
-        upload_dataset.remote(run_id, pictures, config.to_dict())
+        upload_dataset.remote(run_id, pictures, config.to_dict(), captions)
     download_model.remote()
     print(f"Training {run_id}. Resume uses the saved configuration.")
     train_model.remote(run_id, resume)
