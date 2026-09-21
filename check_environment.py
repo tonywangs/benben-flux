@@ -7,7 +7,7 @@ from modal_app import image, web_image
 app = modal.App("benben-environment-check")
 
 
-@app.function(image=image, timeout=600)
+@app.function(image=image.add_local_python_source("modal_app"), timeout=600)
 def training():
     import subprocess
     import diffusers
@@ -18,7 +18,7 @@ def training():
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    return {"torch": torch.__version__, "diffusers": diffusers.__version__, "trainer": "OK"}
+    return {"torch": str(torch.__version__), "diffusers": diffusers.__version__, "trainer": "OK"}
 
 
 @app.function(image=web_image.add_local_python_source("modal_app"), timeout=300)

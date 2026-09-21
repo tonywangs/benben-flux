@@ -16,7 +16,7 @@ uv run modal setup
 3. In [Modal Secrets](https://modal.com/secrets), create `huggingface-secret` containing `HF_TOKEN`. Use the same Modal workspace as your CLI. Keep tokens out of this repository and chat.
 4. For the web app, create `benben-web-auth` with `USERNAME` and a strong `PASSWORD`.
 
-Only the download function receives the Hugging Face secret; only the web function receives the web credentials.
+Create both secrets before running `modal_app.py`: Modal resolves all app resources at startup. Only the download function receives the Hugging Face secret; only the web function receives the web credentials. The independent `check_environment.py` check needs neither secret.
 
 ## Add Benben’s photos
 
