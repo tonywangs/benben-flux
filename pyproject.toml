@@ -1,0 +1,15 @@
+[project]
+name = "benben-flux"
+version = "0.1.0"
+description = "Train a FLUX.1-dev LoRA of Benben the Maltese on Modal"
+requires-python = ">=3.11,<3.14"
+dependencies = ["modal==1.5.5", "pillow==11.3.0", "pillow-heif==1.1.0"]
+
+[dependency-groups]
+dev = ["pytest==8.4.2", "ruff==0.13.2"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
